@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion | Inscription</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+  <link rel="icon" type="image/png" href="ADE.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+        <img src="ADE.png" alt="Logo" style="width:80px;height:auto;">
+    </div>
+    <div id="loginForm">
+      <h2>Connexion</h2>
+      <input type="email" id="loginEmail" placeholder="Adresse e-mail" />
+      <input type="password" id="loginPassword" placeholder="Mot de passe" />
+      
+      <button onclick="login()">Se connecter</button>
+      <p><a href="#" onclick="showReset()">Mot de passe oublié ?</a></p>
+      <p class="toggle" onclick="toggleForms()">Pas encore de compte ? S’inscrire</p>
+      
+
+
+    </div>
+    <div id="registerForm" style="display:none;">
+      <h2>Inscription</h2>
+      <input type="text" id="regName" placeholder="Nom complet" />
+      <input type="email" id="regEmail" placeholder="Adresse e-mail" />
+      <input type="text" id="regPhone" placeholder="Numéro de téléphone" />
+      <input type="password" id="regPassword" placeholder="Mot de passe" />
+      <input type="password" id="regPasswordConfirm" placeholder="Confirmer le mot de passe" />
+
+      <button onclick="register()">Créer un compte</button>
+      <p class="toggle" onclick="toggleForms()">Déjà un compte ? Se connecter</p>
+    </div>
+
+
+    <div id="resetForm" style="display:none;">
+    <h2>Réinitialiser le mot de passe</h2>
+    <input type="email" id="resetEmail" placeholder="Adresse e-mail" />
+    <button onclick="resetPassword()">Envoyer le lien</button>
+    <p class="toggle" onclick="showLogin()">← Retour</p>
+  </div>
+  </div>
+
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
+      from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } 
+      from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbl6n0lK025mMF51zi7prFVc55ORJ-L78",
+      authDomain: "adu-probems-report.firebaseapp.com",
+      projectId: "adu-probems-report",
+      storageBucket: "adu-probems-report.appspot.com",
+      messagingSenderId: "355975418506",
+      appId: "1:355975418506:web:389829fc50ef83ec5c9373",
+      measurementId: "G-6H2P91S08N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.toggleForms = function() {
+      document.getElementById("loginForm").style.display =
+        document.getElementById("loginForm").style.display === "none" ? "block" : "none";
+      document.getElementById("registerForm").style.display =
+        document.getElementById("registerForm").style.display === "none" ? "block" : "none";
+    };
+
+
+
+    window.register = async function() {
+      const name = document.getElementById("regName").value;
+      const email = document.getElementById("regEmail").value;
+      const phone = document.getElementById("regPhone").value;
+      const password = document.getElementById("regPassword").value;
+
+      const confirmPassword = document.getElementById("regPasswordConfirm").value;
+if (password !== confirmPassword) {
+  alert("Les mots de passe ne correspondent pas.");
+  return;
+}
+
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await setDoc(doc(db, "users", user.uid), { name, email, phone });
+        alert("Compte créé avec succès ! Vous pouvez maintenant vous connecter.");
+        toggleForms();
+      } catch (error) {
+        alert("Erreur : " + error.message);
+      }
+    };
+
+    window.login = async function() {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Connexion réussie !");
+        window.location = "dashboard.html";
+      } catch (error) {
+        alert("Erreur : " + error.message);
+      }
+    };
+
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    onAuthStateChanged(auth, (user) => {
+       if (user) {
+         window.location = "dashboard.html";
+     }
+   });
+
+   import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+window.showReset = function() {
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("resetForm").style.display = "block";
+};
+
+
+window.showLogin = function() {
+  document.getElementById("resetForm").style.display = "none";
+  document.getElementById("loginForm").style.display = "block";
+};
+window.resetPassword = async function() {
+  const email = document.getElementById("resetEmail").value;
+  const phone = document.getElementById("resetPhone").value;
+
+  if (!email) {
+    alert("Veuillez entrer votre e-mail et votre numéro de téléphone");
+    return;
+  }
+
+  try {
+    let matched = false;
+
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    usersSnapshot.forEach((userDoc) => {
+      const data = userDoc.data();
+      if (data.email === email && data.phone === phone) {
+        matched = true;
+      }
+    });
+
+    if (matched) {
+      await sendPasswordResetEmail(auth, email);
+      alert("Un e-mail de réinitialisation a été envoyé à " + email);
+      showLogin();
+    } else {
+      alert("Aucun utilisateur trouvé avec cet e-mail et numéro de téléphone.");
+    }
+  } catch (error) {
+    alert("Erreur : " + error.message);
+  }
+};
+
+
+  </script>
+</body>
+</html>
